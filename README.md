@@ -1,4 +1,4 @@
-# another_word_analyze
+# Another word analyzer.
 
 # Word processing:
 1. Translation, Russian / English. The limit is higher than many other translators. Thanks API.
