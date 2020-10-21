@@ -14,7 +14,7 @@ The results are sent in JSON format.
 (Own, not connected)
 1. Authorization
 2. Registration.
-3. Saving the JWT token in the session.
+3. Saving and sending the JWT token in the session.
 
 
 # Used:
