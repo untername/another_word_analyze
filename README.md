@@ -11,9 +11,11 @@
 The results are sent in JSON format.
 
 # And:
+(Own, not connected)
 1. Authorization
 2. Registration.
 3. Saving the JWT token in the session.
+
 
 # Used:
 1. FastAPI.
