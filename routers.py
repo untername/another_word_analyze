@@ -1,11 +1,13 @@
 from fastapi import Depends, HTTPException, status, Response, Query, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.encoders import jsonable_encoder
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from datetime import timedelta
 from typing import Dict, List
 from models.users import User
-from schemas.users import UserCreate, UserORM
+from schemas.users import UserCreate, UserORM, UserBase
 from schemas.tokens import TokenData
 from schemas.words import Choices
 from core.services import UserService, auth_service
@@ -73,12 +75,12 @@ async def login_for_token(response: Response, form_data: OAuth2PasswordRequestFo
         + Добавляет токен в файлы cookie.
     """
 
-    user = user_service.authentificate_user(username=form_data.username, password=form_data.password)
+    user = user_service.is_authenticated_user(username=form_data.username, password=form_data.password)
 
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Error Authentification",
+            detail="Error Authentication",
             headers={"WWW-Authenticate": "Bearer"})
 
     access_expire = timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -105,22 +107,18 @@ async def signup(form_data: UserCreate, database: Session = Depends(get_db)) -> 
         Функция регистрации пользователя.
 
     Raises:
-        HTTPException: Райзится, если пользователь с данным username уже зарегистирован.
+        HTTPException: Райзится, если пользователь с данным username/email уже зарегистирован.
 
     Returns:
         [UserORM]: Возвращает данные о только что зарегистированном пользователе.
     """
-
-    user = user_service.get_user_by_username(username=form_data.username)
-    if user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already registered")
 
     signuped_user = user_service.registrate_user(data=form_data)
 
     return signuped_user
 
 
-@router.get('/me', tags=['User'])
+@router.get('/me', tags=['Me'])
 async def get_me_info(me: User = Depends(get_current_user)) -> Dict[str, User]:
 
     """
@@ -134,6 +132,29 @@ async def get_me_info(me: User = Depends(get_current_user)) -> Dict[str, User]:
     """
 
     return {"me": me}
+
+
+@router.put('/me', tags=['Me'], response_model=UserORM)
+async def put_me_info(email: EmailStr = Query(None), username: str = Query(None), user: User = Depends(get_current_user)) -> UserORM:
+
+    """
+    [Update]
+
+    Returns:
+        [User]: Возвращает обновленную информацию о пользователе.
+    """
+
+    encoded_data = jsonable_encoder(user)
+    update_user = UserBase(**encoded_data)
+
+    if email:
+        update_user.email = email
+    if username:
+        update_user.username = username
+
+    user_updated = user_service.update_user(old_info=user, new_info=update_user)
+
+    return user_updated
 
 
 @router.post('/analyze', dependencies=[Depends(get_current_user)], tags=['Analyzing'])

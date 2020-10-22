@@ -9,12 +9,16 @@
     :instance: auth_service: Нужен для взаимодействия с классом UserService.
 
 [UserService]
+    [get user]:             Поиск юзера по id.
     [get user by email]:    Поиск юзера по почте.
     [get user by username]: Поиск юзера по юзернейму.
     [register user]:        Регистрация пользователя.
-    [authorize user]:       Авторизация пользователя.
+    [is authenticated?]:    Авторизация пользователя.
+    [update user]:          Обновление информации о пользователе.
+    [retrieve user]:        Удаление пользователя из бд.
 """
 
+from fastapi.encoders import jsonable_encoder
 from jose import jwt
 from passlib.context import CryptContext
 from typing import Dict, Optional
@@ -23,7 +27,7 @@ from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from models.users import User
-from schemas.users import UserORM, UserCreate
+from schemas.users import UserORM, UserCreate, UserBase
 from utils.settings import config
 
 
@@ -98,13 +102,25 @@ class UserService:
     def __init__(self, database: Session) -> None:
         self.database = database        # get_db()
 
-    def get_user_by_email(self, *, email: EmailStr) -> User:
+    def get_user(self, *, ident: int) -> User:
 
         """
         [Return User]
 
         Returns:
-            [Dict]: Возвращает пользователя по email.
+            [Dict]: Возвращает пользователя по id.
+        """
+        return self.database.query(User).get(ident=ident)
+
+    def get_user_by_email(self, *, email: EmailStr) -> User:
+
+        """
+        [Return User]
+
+        Нужна для проверки, есть ли в данной бд этот email.
+
+        Returns:
+            [Dict]: Возвращает пользователя.
         """
 
         return self.database.query(User).filter(User.email == email).first()
@@ -114,8 +130,10 @@ class UserService:
         """
         [Return User]
 
+        Нужен для проверки, есть ли в данной бд этот username.
+
         Returns:
-            [Dict]: Возвращает пользователя по username.
+            [Dict]: Возвращает пользователя.
         """
 
         return self.database.query(User).filter(User.username == username).first()
@@ -148,10 +166,10 @@ class UserService:
 
         return user
 
-    def authentificate_user(self, *, username: str, password: str) -> Optional[UserORM]:
+    def is_authenticated_user(self, *, username: str, password: str) -> Optional[UserORM]:
 
         """
-        [Is authentificated?]
+        [Is authenticated?]
 
         Returns:
             [UserORM]: Возвращает данные о пользователе, если он существует.
@@ -165,3 +183,44 @@ class UserService:
             return None
 
         return user
+
+    def update_user(self, *, old_info: UserORM, new_info: UserBase) -> UserORM:
+
+        """
+        [Update]
+
+        Returns:
+            [UserORM]: Возвращает обновленные данные о пользователе.
+        """
+
+        data = jsonable_encoder(old_info)
+        to_update = new_info.dict()
+
+        for item in data:
+            if item in to_update:
+                setattr(old_info, item, to_update[item])
+
+        self.database.add(old_info)
+        self.database.commit()
+        self.database.refresh(old_info)
+
+        return old_info
+
+    def retrieve_user(self, *, username: str) -> User:
+
+        """
+        [Delete]
+
+        Returns:
+            [User]: Возвращает пользователя, данные которого удалены из бд.
+        """
+
+        check = self.database.query(User).filter(User.username == username).first()
+
+        if not check:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This username is not defined")
+
+        self.database.delete(check)
+        self.database.commit()
+
+        return check
