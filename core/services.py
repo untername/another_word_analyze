@@ -15,7 +15,7 @@
     [register user]:        Регистрация пользователя.
     [is authenticated?]:    Авторизация пользователя.
     [update user]:          Обновление информации о пользователе.
-    [retrieve user]:        Удаление пользователя из бд.
+    [destroy user]:         Удаление пользователя из бд.
 """
 
 from fastapi.encoders import jsonable_encoder
@@ -206,7 +206,7 @@ class UserService:
 
         return old_info
 
-    def retrieve_user(self, *, username: str) -> User:
+    def destroy_user(self, *, username: str) -> User:
 
         """
         [Delete]
