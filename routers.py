@@ -171,5 +171,5 @@ async def send_text_for_analyze(text: str, method: List[Choices] = Query(default
         [Dict] Возвращает результаты анализа текста.
     """
 
-    analyzed = text_handler(method=method, text=text)
+    analyzed = await text_handler(method=method, text=text)
     return analyzed

@@ -58,7 +58,7 @@ class AuthService:
 
         return pwd_context.hash(password)
 
-    def verify_password(self, *, user_password, hashed_password) -> bool:
+    def verify_password(self, *, user_password: str, hashed_password: str) -> bool:
 
         """
         [Verify]
@@ -100,7 +100,7 @@ class UserService:
     """
 
     def __init__(self, database: Session) -> None:
-        self.database = database        # get_db()
+        self.database = database
 
     def get_user(self, *, ident: int) -> User:
 

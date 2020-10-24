@@ -30,7 +30,7 @@ class Analyzer:
         txt = TextBlob(text)
         self.text = txt.translate(to='en') if txt.detect_language() != 'en' else txt
 
-    def wordcount(self) -> Dict[str, str]:
+    async def wordcount(self) -> Dict[str, str]:
 
         """
         Функция, подсчитывающая частотность слов. Отбрасывает ненужные символы и сортирует результат.
@@ -42,7 +42,7 @@ class Analyzer:
 
         return dict(result)
 
-    def text_polarity(self) -> Union[str, Dict[str, str]]:
+    async def text_polarity(self) -> Union[str, Dict[str, str]]:
 
         """
         Метод, анализирующая полярность и субъективность полученного текста.
@@ -56,7 +56,7 @@ class Analyzer:
 
         return result
 
-    def get_correct(self) -> Dict[str, Union[str, Dict]]:
+    async def get_correct(self) -> Dict[str, Union[str, Dict]]:
 
         """
         Метод, возвращающая текст без ошибок и варианты правильного написания слов.
@@ -69,7 +69,7 @@ class Analyzer:
             "corrected": str(corrected_word),
             "correctly words": correctly_vars}
 
-    def get_definitions(self) -> Dict[str, Union[List, str]]:
+    async def get_definitions(self) -> Dict[str, Union[List, str]]:
 
         """
         Функция для нахождения определений конкретных слов.
@@ -88,7 +88,7 @@ class Analyzer:
         couple = dict(zip(words, definitions))
         return couple
 
-    def get_synonyms(self) -> Dict[str, List[str]]:
+    async def get_synonyms(self) -> Dict[str, List[str]]:
 
         """
         Функция, находящая синонимы каждого слова в полученном тексте.
@@ -115,7 +115,7 @@ class Analyzer:
         result = dict(zip(words, synonims))
         return result
 
-    def get_antonyms(self) -> Dict[str, str]:
+    async def get_antonyms(self) -> Dict[str, str]:
 
         """
         Функция, возвращающая список антонимов.
@@ -146,7 +146,7 @@ class Analyzer:
         result = dict(zip(words, antonyms))
         return result
 
-    def ru_translate(self) -> str:
+    async def ru_translate(self) -> str:
 
         """
         Ничего необычного. Функция, переводящая с русского на английский или наоборот.
