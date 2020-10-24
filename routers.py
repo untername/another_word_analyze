@@ -1,6 +1,8 @@
 from fastapi import Depends, HTTPException, status, Response, Query, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
+from starlette.responses import JSONResponse
+from starlette.background import BackgroundTask
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
@@ -10,16 +12,17 @@ from models.users import User
 from schemas.users import UserCreate, UserORM, UserBase
 from schemas.tokens import TokenData
 from schemas.words import Choices
-from core.services import UserService, auth_service
+from core.services import UserService, auth_service, EmailService
 from core.database import get_db
 from core.authentication import AuthWithCookie
 from utils.handlers import text_handler
-from utils.settings import config
+from utils.settings import token_config
 
 
 router = APIRouter()
 auth_scheme = AuthWithCookie(tokenUrl='/token')
 user_service = UserService(database=get_db())
+email_service = EmailService()
 
 
 async def get_current_user(token: str = Depends(auth_scheme), database: Session = Depends(get_db)) -> User:
@@ -42,7 +45,7 @@ async def get_current_user(token: str = Depends(auth_scheme), database: Session 
         status_code=status.HTTP_401_UNAUTHORIZED, detail="Error Authentificate", headers={"WWW-Authenticate": "Bearer"})
 
     try:
-        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+        payload = jwt.decode(token, token_config.SECRET_KEY, algorithms=[token_config.ALGORITHM])
         username: str = payload.get('sub')
         if username is None:
             raise credentials
@@ -83,7 +86,7 @@ async def login_for_token(response: Response, form_data: OAuth2PasswordRequestFo
             detail="Error Authentication",
             headers={"WWW-Authenticate": "Bearer"})
 
-    access_expire = timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_expire = timedelta(minutes=token_config.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth_service.create_token(data={"sub": user.username}, expires_delta=access_expire)
 
     response.set_cookie(
@@ -98,7 +101,7 @@ async def login_for_token(response: Response, form_data: OAuth2PasswordRequestFo
 
 
 @router.post('/signup', response_model=UserORM, tags=['User'])
-async def signup(form_data: UserCreate, database: Session = Depends(get_db)) -> UserORM:
+async def signup(form_data: UserCreate, database: Session = Depends(get_db)) -> JSONResponse:
 
     """
     [Registration]
@@ -111,11 +114,14 @@ async def signup(form_data: UserCreate, database: Session = Depends(get_db)) -> 
 
     Returns:
         [UserORM]: Возвращает данные о только что зарегистированном пользователе.
+        + Пользователю отправляется сообщение по почте.
     """
 
     signuped_user = user_service.registrate_user(data=form_data)
+    endoded = jsonable_encoder(signuped_user)
+    task = BackgroundTask(email_service.email_for_new_user, form_data.email, form_data.username)
 
-    return signuped_user
+    return JSONResponse(endoded, background=task)
 
 
 @router.get('/me', tags=['Me'])

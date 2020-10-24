@@ -16,19 +16,25 @@
     [is authenticated?]:    Авторизация пользователя.
     [update user]:          Обновление информации о пользователе.
     [destroy user]:         Удаление пользователя из бд.
+
+[EmailService]
+    [send email]:           Отправить сообщение по почте.
+    [email for new user]:   Отправить сообщение новому пользователю.
 """
 
 from fastapi.encoders import jsonable_encoder
 from jose import jwt
 from passlib.context import CryptContext
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+import emails
+from emails.template import JinjaTemplate
 from models.users import User
 from schemas.users import UserORM, UserCreate, UserBase
-from utils.settings import config
+from utils.settings import token_config, email_config
 
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -83,7 +89,7 @@ class AuthService:
         expire += expires_delta if expires_delta else timedelta(minutes=15)
 
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, config.SECRET_KEY, algorithm=config.ALGORITHM)
+        encoded_jwt = jwt.encode(to_encode, token_config.SECRET_KEY, algorithm=token_config.ALGORITHM)
 
         return encoded_jwt
 
@@ -224,3 +230,60 @@ class UserService:
         self.database.commit()
 
         return check
+
+
+class EmailService:
+
+    """
+    [Email]
+
+    Класс, объединяющий все методы отправки сообщений по почте. Пока их только 2.
+    """
+
+    async def send_mail(self, to: str, subject: str = "", template: str = "", environment: Any = {}) -> None:
+
+        """
+        [Send]
+
+        Метод, отвечающий за отправку сообщения по почте. Только и всего.
+        """
+
+        message = emails.Message(
+            subject=JinjaTemplate(subject),
+            html=JinjaTemplate(template),
+            mail_from=("Untername0", email_config.DEFAULT_FROM_EMAIL))
+
+        settings = {
+            "host": email_config.EMAIL_HOST,
+            "port": email_config.EMAIL_PORT,
+            "user": email_config.EMAIL_HOST_USER,
+            "password": email_config.EMAIL_HOST_PASSWORD,
+            "tls": email_config.EMAIL_USE_TLS}
+
+        response = message.send(to=to, render=environment, smtp=settings)
+        assert response.status_code == 250
+
+    async def email_for_new_user(self, email: str, username: str) -> None:
+
+        """
+        [For new]
+
+        Метод, который вызывается при регистрации нового пользователя.
+        Делегирует свою работу методу выше.
+        """
+
+        title = f"Welcome, {username}"
+        url_link = email_config.HTTP_URL
+
+        with open("new_user_email.html") as f:
+            template = f.read()
+
+        await self.send_mail(
+            to=email,
+            subject=title,
+            template=template,
+            environment={
+                "project_name": "FastAPI",
+                "username": username,
+                "email": email,
+                "link": url_link})
