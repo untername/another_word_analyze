@@ -13,7 +13,7 @@ class EmailConfig(BaseSettings):
     EMAIL_HOST: str = 'smtp.sendgrid.net'
     EMAIL_HOST_USER: str = ''
     EMAIL_HOST_PASSWORD: str = ''
-    EMAIL_PORT: int = 0
+    EMAIL_PORT: int = 0 
     EMAIL_USE_TLS: bool = True
     DEFAULT_FROM_EMAIL: str = ''
 
