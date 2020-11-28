@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status, Response, Query, APIRouter
+from fastapi import Depends, HTTPException, status, Response, Query, APIRouter, Security
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse
@@ -25,7 +25,7 @@ user_service = UserService(database=get_db())
 email_service = EmailService()
 
 
-async def get_current_user(token: str = Depends(auth_scheme), database: Session = Depends(get_db)) -> User:
+async def get_current_user(token: str = Depends(auth_scheme), database: Session = Security(get_db)) -> User:
 
     """
     [Current User | Depend]

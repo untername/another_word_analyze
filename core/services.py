@@ -275,7 +275,7 @@ class EmailService:
         title = f"Welcome, {username}"
         url_link = email_config.HTTP_URL
 
-        with open("new_user_email.html") as f:
+        with open("C:/Proects/API_FastAPI/fast_api_backend/new_user_email.html") as f:
             template = f.read()
 
         await self.send_mail(
